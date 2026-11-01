@@ -6,20 +6,191 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar SDK
+        run: |
+          sdkmanager --licenses
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - uses: android-actions/setup-android@v3
-      - name: Instalar SDK
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - name: Compilar
+
+      - name: Criar aplicativo
+        run: |
+          mkdir -p app/src/main/java/com/example/pkxdmodmenu
+          mkdir -p app/src/main/assets
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "PK_XD_MOD_MENU"
+          include(":app")
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > gradle.properties <<'EOF'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.example.pkxdmodmenu'
+              compileSdk 35
+              defaultConfig {
+                  applicationId 'com.example.pkxdmodmenu'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:label="PK XD MOD MENU">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/example/pkxdmodmenu/MainActivity.java <<'EOF'
+          package com.example.pkxdmodmenu;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+
+          public class MainActivity extends Activity {
+              @Override
+              public void onCreate(Bundle state) {
+                  super.onCreate(state);
+                  WebView web = new WebView(this);
+                  web.getSettings().setJavaScriptEnabled(true);
+                  setContentView(web);
+                  web.loadUrl("file:///android_asset/index.html");
+              }
+          }
+          EOF
+
+          cat > app/src/main/assets/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="pt-BR">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <style>
+          body {
+            background: #030d1c;
+            color: white;
+            font-family: Arial;
+            padding: 20px;
+          }
+          .menu {
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+            border: 2px solid #00dfff;
+            border-radius: 22px;
+            box-shadow: 0 0 25px #00bfff;
+            background: #081b32;
+          }
+          h1 {
+            text-align: center;
+            color: #00eaff;
+            text-shadow: 0 0 15px #00dfff;
+          }
+          .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            margin: 12px 0;
+            background: #102d4c;
+            border-radius: 12px;
+          }
+          button {
+            background: #063d70;
+            border: 1px solid #00eaff;
+            color: white;
+            border-radius: 20px;
+            padding: 10px;
+          }
+          .active {
+            background: #008dff;
+            box-shadow: 0 0 12px #00eaff;
+          }
+          </style>
+          </head>
+          <body>
+          <div class="menu">
+          <h1>PK XD MOD MENU</h1>
+          <h2>💎 Gemas: ∞</h2>
+          <h2>🪙 Moedas: ∞</h2>
+
+          <div class="item">💎 Gemas infinitas <button onclick="toggle(this)">ON</button></div>
+          <div class="item">🪙 Moedas infinitas <button onclick="toggle(this)">ON</button></div>
+          <div class="item">🚀 Supervelocidade <button onclick="toggle(this)">OFF</button></div>
+          <div class="item">🦘 Superpulo <button onclick="toggle(this)">OFF</button></div>
+          <div class="item">✈️ Modo voo <button onclick="toggle(this)">OFF</button></div>
+
+          <p style="color:#81dfff;text-align:center">
+          DEMONSTRAÇÃO INDEPENDENTE
+          </p>
+          </div>
+          <script>
+          function toggle(b) {
+            b.classList.toggle('active');
+            b.innerText = b.classList.contains('active') ? 'ON' : 'OFF';
+          }
+          </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Compilar APK
         run: gradle assembleDebug
+
       - uses: actions/upload-artifact@v4
         with:
           name: PK-XD-MOD-MENU-APK
